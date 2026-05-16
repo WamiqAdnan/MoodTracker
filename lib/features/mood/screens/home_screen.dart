@@ -162,8 +162,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildMoodSelector() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 400;
-        final faceSize = narrow ? 56.0 : 80.0;
+        // 5 faces + 4 gaps (8px each) must fit in available width minus 24px padding
+        final available = constraints.maxWidth - 24;
+        final faceSize = ((available - 4 * 8) / 5).clamp(40.0, 80.0);
+        final showLabel = faceSize >= 60;
         return Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -178,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   mood: mood,
                   isSelected: isSelected,
                   faceSize: faceSize,
-                  showLabel: !narrow,
+                  showLabel: showLabel,
                   onTap: () => _onMoodTapped(mood),
                 );
               }).toList(),
@@ -221,8 +223,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SizedBox(height: 24),
         LayoutBuilder(
           builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 400;
-            final faceSize = narrow ? 56.0 : 80.0;
+            final available = constraints.maxWidth - 24;
+            final faceSize = ((available - 4 * 8) / 5).clamp(40.0, 80.0);
+            final showLabel = faceSize >= 60;
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: MoodType.values.map((mood) {
@@ -230,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   mood: mood,
                   isSelected: false,
                   faceSize: faceSize,
-                  showLabel: !narrow,
+                  showLabel: showLabel,
                   onTap: () => _onMoodTapped(mood),
                 );
               }).toList(),

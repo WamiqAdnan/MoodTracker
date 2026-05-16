@@ -37,6 +37,14 @@ extension MoodTypeX on MoodType {
       };
 
   bool get hasTeeth => this == MoodType.ecstatic;
+
+  int get graphValue => switch (this) {
+        MoodType.awful => 1,
+        MoodType.sad => 2,
+        MoodType.neutral => 3,
+        MoodType.happy => 4,
+        MoodType.ecstatic => 5,
+      };
 }
 
 class MoodEntry {
