@@ -45,6 +45,39 @@ extension MoodTypeX on MoodType {
     MoodType.happy => 4,
     MoodType.ecstatic => 5,
   };
+
+  double get mouthPulseDelta => switch (this) {
+    MoodType.ecstatic => 0.35,
+    MoodType.happy => 0.30,
+    MoodType.neutral => 0.08,
+    MoodType.sad => -0.25,
+    MoodType.awful => -0.28,
+  };
+
+  double get browPulseDelta => switch (this) {
+    MoodType.ecstatic || MoodType.happy || MoodType.neutral => 0.0,
+    MoodType.sad => 0.12,
+    MoodType.awful => 0.15,
+  };
+
+  double get browArchDelta => switch (this) {
+    MoodType.ecstatic => 0.35,
+    MoodType.happy => 0.25,
+    _ => 0.0,
+  };
+
+  Duration get pulseDuration => switch (this) {
+    MoodType.ecstatic => const Duration(milliseconds: 480),
+    MoodType.happy => const Duration(milliseconds: 600),
+    MoodType.neutral => const Duration(milliseconds: 1100),
+    MoodType.sad => const Duration(milliseconds: 900),
+    MoodType.awful => const Duration(milliseconds: 1300),
+  };
+
+  Curve get pulseCurve => switch (this) {
+    MoodType.sad || MoodType.awful => Curves.easeIn,
+    _ => Curves.easeInOut,
+  };
 }
 
 class MoodEntry {

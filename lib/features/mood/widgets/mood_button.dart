@@ -25,10 +25,12 @@ class MoodButton extends StatefulWidget {
 }
 
 class _MoodButtonState extends State<MoodButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _hovered = false;
   late final AnimationController _scaleController;
   late final Animation<double> _scaleAnimation;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -44,11 +46,21 @@ class _MoodButtonState extends State<MoodButton>
       begin: 1.0,
       end: 1.08,
     ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOut));
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: widget.mood.pulseDuration,
+    );
+    _pulseAnimation = CurvedAnimation(
+      parent: _pulseController,
+      curve: widget.mood.pulseCurve,
+    );
   }
 
   @override
   void dispose() {
     _scaleController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -56,8 +68,14 @@ class _MoodButtonState extends State<MoodButton>
     setState(() => _hovered = hovered);
     if (hovered) {
       _scaleController.forward();
+      _pulseController.repeat(reverse: true);
     } else {
       _scaleController.reverse();
+      _pulseController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -110,9 +128,16 @@ class _MoodButtonState extends State<MoodButton>
                       : null,
                 ),
                 child: Center(
-                  child: CustomPaint(
-                    size: Size(widget.faceSize, widget.faceSize),
-                    painter: FacePainter(mood: widget.mood, accentColor: color),
+                  child: AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, _) => CustomPaint(
+                      size: Size(widget.faceSize, widget.faceSize),
+                      painter: FacePainter(
+                        mood: widget.mood,
+                        accentColor: color,
+                        expressionPulse: _pulseAnimation.value,
+                      ),
+                    ),
                   ),
                 ),
               ),
