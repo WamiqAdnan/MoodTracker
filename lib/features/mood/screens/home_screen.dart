@@ -496,8 +496,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildMoodRow() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final faceSize = (constraints.maxWidth / 5 - 16).clamp(20.0, 72.0);
-        final showLabel = faceSize >= 44;
+        final faceSize = (constraints.maxWidth / 5 - 24).clamp(16.0, 72.0);
+        final showLabel = faceSize >= 40;
         return Row(
           children: MoodType.values.map((mood) {
             final isSelected =
