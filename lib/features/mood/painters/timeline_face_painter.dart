@@ -38,15 +38,21 @@ class TimelineFacePainter extends CustomPainter {
   }
 
   void _drawHead(Canvas canvas, double cx, double cy, double radius) {
-    canvas.drawCircle(Offset(cx, cy), radius,
-        Paint()
-          ..color = accentColor.withOpacity(0.20)
-          ..style = PaintingStyle.fill);
-    canvas.drawCircle(Offset(cx, cy), radius,
-        Paint()
-          ..color = accentColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      radius,
+      Paint()
+        ..color = accentColor.withValues(alpha: 0.20)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      radius,
+      Paint()
+        ..color = accentColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
   }
 
   void _drawEyes(Canvas canvas, double cx, double cy, double radius) {
@@ -113,9 +119,12 @@ class TimelineFacePainter extends CustomPainter {
     final path = Path()
       ..moveTo(cx - halfW, mouthY + cornerDrop)
       ..cubicTo(
-        cx - halfW * 0.5, cpY,
-        cx + halfW * 0.5, cpY,
-        cx + halfW, mouthY + cornerDrop,
+        cx - halfW * 0.5,
+        cpY,
+        cx + halfW * 0.5,
+        cpY,
+        cx + halfW,
+        mouthY + cornerDrop,
       );
     canvas.drawPath(path, paint);
 
@@ -125,12 +134,15 @@ class TimelineFacePainter extends CustomPainter {
         Path()
           ..moveTo(cx - halfW * 0.72, mouthY + radius * 0.06)
           ..cubicTo(
-            cx - halfW * 0.3, teethCpY,
-            cx + halfW * 0.3, teethCpY,
-            cx + halfW * 0.72, mouthY + radius * 0.06,
+            cx - halfW * 0.3,
+            teethCpY,
+            cx + halfW * 0.3,
+            teethCpY,
+            cx + halfW * 0.72,
+            mouthY + radius * 0.06,
           ),
         Paint()
-          ..color = accentColor.withOpacity(0.40)
+          ..color = accentColor.withValues(alpha: 0.40)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0
           ..strokeCap = StrokeCap.round,
@@ -140,20 +152,22 @@ class TimelineFacePainter extends CustomPainter {
 
   void _drawCheeks(Canvas canvas, double cx, double cy, double radius) {
     final paint = Paint()
-      ..color = accentColor.withOpacity(0.18)
+      ..color = accentColor.withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx - radius * 0.55, cy + radius * 0.08),
-          width: radius * 0.22,
-          height: radius * 0.13),
+        center: Offset(cx - radius * 0.55, cy + radius * 0.08),
+        width: radius * 0.22,
+        height: radius * 0.13,
+      ),
       paint,
     );
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx + radius * 0.55, cy + radius * 0.08),
-          width: radius * 0.22,
-          height: radius * 0.13),
+        center: Offset(cx + radius * 0.55, cy + radius * 0.08),
+        width: radius * 0.22,
+        height: radius * 0.13,
+      ),
       paint,
     );
   }

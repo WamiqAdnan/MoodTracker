@@ -1,17 +1,31 @@
-# mood_tracker
+# Mood Tracker
 
-A new Flutter project.
+A Flutter web app for logging and visualising daily moods. Five mood levels (Ecstatic → Awful) are rendered as expressive faces drawn entirely with `CustomPainter` — no emoji, no icon fonts, no images.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **5 mood levels** — Ecstatic, Happy, Neutral, Sad, Awful
+- **CustomPainter faces** — head, eyes, brows, mouth, and cheeks drawn with canvas primitives (`drawCircle`, `drawArc`, `drawPath`, `cubicTo`)
+- **Mood graph** — smooth Catmull-Rom spline timeline showing the last 7 entries; face icons sit directly on the data points
+- **Insight card** — contextual narrative insight plus streak and average stats
+- **Persistence** — entries survive page reloads via `shared_preferences`
+- **Responsive** — face size adapts down to narrow viewports
 
-A few resources to get you started if this is your first Flutter project:
+## Run locally
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter run -d chrome
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Build for production
+
+```bash
+flutter build web
+```
+
+Output is written to `build/web/`. Serve it with any static host.
+
+## Tech
+
+- Flutter 3.x, Dart 3.x, CanvasKit renderer
+- Packages: `uuid`, `shared_preferences`, `intl`

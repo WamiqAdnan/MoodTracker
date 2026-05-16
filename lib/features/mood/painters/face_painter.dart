@@ -37,15 +37,21 @@ class FacePainter extends CustomPainter {
   }
 
   void _drawHead(Canvas canvas, double cx, double cy, double radius) {
-    canvas.drawCircle(Offset(cx, cy), radius,
-        Paint()
-          ..color = accentColor.withOpacity(0.20)
-          ..style = PaintingStyle.fill);
-    canvas.drawCircle(Offset(cx, cy), radius,
-        Paint()
-          ..color = accentColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      radius,
+      Paint()
+        ..color = accentColor.withValues(alpha: 0.20)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      radius,
+      Paint()
+        ..color = accentColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
   }
 
   void _drawEyes(Canvas canvas, double cx, double cy, double radius) {
@@ -118,17 +124,13 @@ class FacePainter extends CustomPainter {
 
     final path = Path()
       ..moveTo(cx - halfW, startY)
-      ..cubicTo(
-        cx - halfW * 0.5, cpY,
-        cx + halfW * 0.5, cpY,
-        cx + halfW, endY,
-      );
+      ..cubicTo(cx - halfW * 0.5, cpY, cx + halfW * 0.5, cpY, cx + halfW, endY);
     canvas.drawPath(path, paint);
 
     // Teeth hint for ecstatic (inner arc, lighter)
     if (mood.hasTeeth) {
       final teethPaint = Paint()
-        ..color = accentColor.withOpacity(0.40)
+        ..color = accentColor.withValues(alpha: 0.40)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round;
@@ -136,9 +138,12 @@ class FacePainter extends CustomPainter {
       final teethPath = Path()
         ..moveTo(cx - halfW * 0.72, mouthY + radius * 0.06)
         ..cubicTo(
-          cx - halfW * 0.3, teethCpY,
-          cx + halfW * 0.3, teethCpY,
-          cx + halfW * 0.72, mouthY + radius * 0.06,
+          cx - halfW * 0.3,
+          teethCpY,
+          cx + halfW * 0.3,
+          teethCpY,
+          cx + halfW * 0.72,
+          mouthY + radius * 0.06,
         );
       canvas.drawPath(teethPath, teethPaint);
     }
@@ -146,21 +151,23 @@ class FacePainter extends CustomPainter {
 
   void _drawCheeks(Canvas canvas, double cx, double cy, double radius) {
     final paint = Paint()
-      ..color = accentColor.withOpacity(0.18)
+      ..color = accentColor.withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
     final cheekY = cy + radius * 0.08;
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx - radius * 0.55, cheekY),
-          width: radius * 0.24,
-          height: radius * 0.14),
+        center: Offset(cx - radius * 0.55, cheekY),
+        width: radius * 0.24,
+        height: radius * 0.14,
+      ),
       paint,
     );
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(cx + radius * 0.55, cheekY),
-          width: radius * 0.24,
-          height: radius * 0.14),
+        center: Offset(cx + radius * 0.55, cheekY),
+        width: radius * 0.24,
+        height: radius * 0.14,
+      ),
       paint,
     );
   }

@@ -15,15 +15,16 @@ class TimelineStrip extends StatelessWidget {
   final String? animatingId;
   final void Function(String id) onEntryTap;
 
-  static const double _faceSize = 40.0;
+  static const double _faceSize = 36.0;
   static const double _leftPad = 28.0;
   static const double _rightPad = 32.0;
   static const double _bottomPad = 20.0;
-  static const double _faceAreaH = 52.0;
+  // Half the face size so faces on the top/bottom edges aren't clipped
+  static const double _topPad = _faceSize / 2 + 4;
 
   @override
   Widget build(BuildContext context) {
-    final displayed = entries.take(7).toList(); // newest first → left on graph
+    final displayed = entries.take(7).toList();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -34,36 +35,43 @@ class TimelineStrip extends StatelessWidget {
         return Stack(
           clipBehavior: Clip.none,
           children: [
-            // Graph (no text drawn inside painter)
+            // Graph layer (no dots — faces replace them)
             CustomPaint(
               size: Size(w, h),
               painter: _MoodGraphPainter(
                 entries: displayed,
                 points: pts,
-                faceAreaH: _faceAreaH,
+                topPad: _topPad,
                 bottomPad: _bottomPad,
                 leftPad: _leftPad,
                 rightPad: _rightPad,
               ),
             ),
 
-            // Y-axis labels: 1–5 as Text widgets
-            ..._yLabels(h),
-
             // X-axis date labels
             ..._xLabels(displayed, pts, h),
 
-            // Face icons above each data point
+            // Face icons centered on each data point.
+            // The Container punches a solid circle over the line so it
+            // doesn't bleed through the semi-transparent face fill.
             for (var i = 0; i < pts.length; i++)
               Positioned(
                 left: pts[i].dx - _faceSize / 2,
-                top: _faceAreaH / 2 - _faceSize / 2,
-                child: _FaceIcon(
-                  key: ValueKey(displayed[i].id),
-                  entry: displayed[i],
-                  size: _faceSize,
-                  isAnimating: animatingId == displayed[i].id,
-                  onTap: () => onEntryTap(displayed[i].id),
+                top: pts[i].dy - _faceSize / 2,
+                child: Container(
+                  width: _faceSize,
+                  height: _faceSize,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF1A1830),
+                  ),
+                  child: _FaceIcon(
+                    key: ValueKey(displayed[i].id),
+                    entry: displayed[i],
+                    size: _faceSize,
+                    isAnimating: animatingId == displayed[i].id,
+                    onTap: () => onEntryTap(displayed[i].id),
+                  ),
                 ),
               ),
 
@@ -71,7 +79,7 @@ class TimelineStrip extends StatelessWidget {
               const Center(
                 child: Text(
                   'tap a mood to see your graph',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFB0ACBD)),
+                  style: TextStyle(fontSize: 11, color: Color(0xFF8B8FA8)),
                 ),
               ),
           ],
@@ -80,34 +88,28 @@ class TimelineStrip extends StatelessWidget {
     );
   }
 
-  List<Widget> _yLabels(double totalH) {
-    const graphTop = _faceAreaH + 4;
-    final graphBottom = totalH - _bottomPad;
+  List<Offset> _calcPoints(List<MoodEntry> entries, double w, double h) {
+    if (entries.isEmpty) return [];
+    final graphLeft = _leftPad;
+    final graphRight = w - _rightPad;
+    final graphTop = _topPad;
+    final graphBottom = h - _bottomPad;
+    final graphW = graphRight - graphLeft;
     final graphH = graphBottom - graphTop;
 
-    return List.generate(5, (i) {
-      final v = 5 - i; // 5 at top, 1 at bottom
-      final yFrac = 1.0 - (v - 1) / 4.0;
+    return List.generate(entries.length, (i) {
+      final xFrac = entries.length == 1 ? 0.5 : i / (entries.length - 1);
+      final x = graphLeft + xFrac * graphW;
+      final val = entries[i].moodType.graphValue; // 1–5
+      final yFrac = 1.0 - (val - 1) / 4.0; // 5→top, 1→bottom
       final y = graphTop + yFrac * graphH;
-      return Positioned(
-        left: 0,
-        top: y - 6,
-        child: SizedBox(
-          width: _leftPad - 4,
-          child: Text(
-            '$v',
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 9, color: Color(0xFFB0ACBD)),
-          ),
-        ),
-      );
+      return Offset(x, y);
     });
   }
 
-  List<Widget> _xLabels(
-      List<MoodEntry> displayed, List<Offset> pts, double totalH) {
+  List<Widget> _xLabels(List<MoodEntry> displayed, List<Offset> pts, double h) {
     final fmt = DateFormat('d MMM');
-    final top = totalH - _bottomPad + 4;
+    final top = h - _bottomPad + 4;
     return List.generate(pts.length, (i) {
       final label = fmt.format(displayed[i].timestamp);
       return Positioned(
@@ -118,40 +120,21 @@ class TimelineStrip extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 8, color: Color(0xFFB0ACBD)),
+            style: const TextStyle(fontSize: 8, color: Color(0xFF8B8FA8)),
           ),
         ),
       );
     });
   }
-
-  List<Offset> _calcPoints(List<MoodEntry> entries, double w, double h) {
-    if (entries.isEmpty) return [];
-    const graphLeft = _leftPad;
-    final graphRight = w - _rightPad;
-    const graphTop = _faceAreaH + 4;
-    final graphBottom = h - _bottomPad;
-    final graphW = graphRight - graphLeft;
-    final graphH = graphBottom - graphTop;
-
-    return List.generate(entries.length, (i) {
-      final xFrac = entries.length == 1 ? 0.5 : i / (entries.length - 1);
-      final x = graphLeft + xFrac * graphW;
-      final val = entries[i].moodType.graphValue;
-      final yFrac = 1.0 - (val - 1) / 4.0;
-      final y = graphTop + yFrac * graphH;
-      return Offset(x, y);
-    });
-  }
 }
 
-// ── Graph painter (no text) ───────────────────────────────────────────────────
+// ── Graph painter ─────────────────────────────────────────────────────────────
 
 class _MoodGraphPainter extends CustomPainter {
   const _MoodGraphPainter({
     required this.entries,
     required this.points,
-    required this.faceAreaH,
+    required this.topPad,
     required this.bottomPad,
     required this.leftPad,
     required this.rightPad,
@@ -159,17 +142,17 @@ class _MoodGraphPainter extends CustomPainter {
 
   final List<MoodEntry> entries;
   final List<Offset> points;
-  final double faceAreaH;
+  final double topPad;
   final double bottomPad;
   final double leftPad;
   final double rightPad;
 
   static const _lineColor = Color(0xFF7A9BAD);
-  static const _axisColor = Color(0xFFCECBD8);
+  static const _axisColor = Color(0xFF2A2740);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final graphTop = faceAreaH + 4;
+    final graphTop = topPad;
     final graphBottom = size.height - bottomPad;
     final graphLeft = leftPad;
     final graphRight = size.width - rightPad;
@@ -182,10 +165,16 @@ class _MoodGraphPainter extends CustomPainter {
 
     _drawShade(canvas, points, graphBottom);
     _drawLine(canvas, points);
-    _drawDots(canvas, points);
+    // No dots — faces sit on the line instead
   }
 
-  void _drawAxes(Canvas canvas, double left, double right, double top, double bottom) {
+  void _drawAxes(
+    Canvas canvas,
+    double left,
+    double right,
+    double top,
+    double bottom,
+  ) {
     final p = Paint()
       ..color = _axisColor
       ..strokeWidth = 1.0;
@@ -193,13 +182,19 @@ class _MoodGraphPainter extends CustomPainter {
     canvas.drawLine(Offset(left, bottom), Offset(right, bottom), p);
   }
 
-  void _drawGrid(Canvas canvas, double left, double top, double right,
-      double bottom, double h) {
+  void _drawGrid(
+    Canvas canvas,
+    double left,
+    double top,
+    double right,
+    double bottom,
+    double h,
+  ) {
     final tick = Paint()
       ..color = _axisColor
       ..strokeWidth = 1.0;
     final gridLine = Paint()
-      ..color = _axisColor.withOpacity(0.35)
+      ..color = _axisColor.withValues(alpha: 0.5)
       ..strokeWidth = 0.5;
 
     for (int v = 1; v <= 5; v++) {
@@ -215,11 +210,10 @@ class _MoodGraphPainter extends CustomPainter {
     smooth.lineTo(pts.last.dx, bottom);
     smooth.lineTo(pts.first.dx, bottom);
     smooth.close();
-
     canvas.drawPath(
       smooth,
       Paint()
-        ..color = _lineColor.withOpacity(0.12)
+        ..color = _lineColor.withValues(alpha: 0.10)
         ..style = PaintingStyle.fill,
     );
   }
@@ -236,20 +230,6 @@ class _MoodGraphPainter extends CustomPainter {
     );
   }
 
-  void _drawDots(Canvas canvas, List<Offset> pts) {
-    for (final pt in pts) {
-      canvas.drawCircle(pt, 5,
-          Paint()
-            ..color = const Color(0xFFF7F6F3)
-            ..style = PaintingStyle.fill);
-      canvas.drawCircle(pt, 5,
-          Paint()
-            ..color = _lineColor
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.0);
-    }
-  }
-
   Path _smoothPath(List<Offset> pts) {
     final path = Path()..moveTo(pts[0].dx, pts[0].dy);
     if (pts.length == 1) return path;
@@ -258,8 +238,14 @@ class _MoodGraphPainter extends CustomPainter {
       final p1 = pts[i];
       final p2 = pts[i + 1];
       final p3 = pts[i < pts.length - 2 ? i + 2 : i + 1];
-      final cp1 = Offset(p1.dx + (p2.dx - p0.dx) / 6, p1.dy + (p2.dy - p0.dy) / 6);
-      final cp2 = Offset(p2.dx - (p3.dx - p1.dx) / 6, p2.dy - (p3.dy - p1.dy) / 6);
+      final cp1 = Offset(
+        p1.dx + (p2.dx - p0.dx) / 6,
+        p1.dy + (p2.dy - p0.dy) / 6,
+      );
+      final cp2 = Offset(
+        p2.dx - (p3.dx - p1.dx) / 6,
+        p2.dy - (p3.dy - p1.dy) / 6,
+      );
       path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p2.dx, p2.dy);
     }
     return path;
@@ -299,16 +285,24 @@ class _FaceIconState extends State<_FaceIcon>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _scale = TweenSequence([
       TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 1.2)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 50),
+        tween: Tween(
+          begin: 1.0,
+          end: 1.3,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 50,
+      ),
       TweenSequenceItem(
-          tween: Tween(begin: 1.2, end: 1.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 50),
+        tween: Tween(
+          begin: 1.3,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50,
+      ),
     ]).animate(_ctrl);
   }
 

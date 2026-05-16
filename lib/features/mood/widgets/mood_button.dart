@@ -40,9 +40,10 @@ class _MoodButtonState extends State<MoodButton>
       upperBound: 1.0,
       value: 1.0,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOut));
   }
 
   @override
@@ -87,8 +88,9 @@ class _MoodButtonState extends State<MoodButton>
                       : Colors.transparent,
                   border: showRing
                       ? Border.all(
-                          color: color.withOpacity(
-                              widget.isSelected ? 1.0 : 0.55),
+                          color: color.withValues(
+                            alpha: widget.isSelected ? 1.0 : 0.55,
+                          ),
                           width: widget.isSelected ? 2.5 : 1.5,
                         )
                       : Border.all(
@@ -100,20 +102,17 @@ class _MoodButtonState extends State<MoodButton>
                   boxShadow: showRing
                       ? [
                           BoxShadow(
-                            color: color.withOpacity(0.28),
+                            color: color.withValues(alpha: 0.28),
                             blurRadius: 12,
                             spreadRadius: 2,
-                          )
+                          ),
                         ]
                       : null,
                 ),
                 child: Center(
                   child: CustomPaint(
                     size: Size(widget.faceSize, widget.faceSize),
-                    painter: FacePainter(
-                      mood: widget.mood,
-                      accentColor: color,
-                    ),
+                    painter: FacePainter(mood: widget.mood, accentColor: color),
                   ),
                 ),
               ),
@@ -127,9 +126,7 @@ class _MoodButtonState extends State<MoodButton>
                   fontWeight: widget.isSelected
                       ? FontWeight.w700
                       : FontWeight.w500,
-                  color: widget.isSelected
-                      ? color
-                      : const Color(0xFF8B8FA8),
+                  color: widget.isSelected ? color : const Color(0xFF8B8FA8),
                   letterSpacing: 0.8,
                 ),
                 child: Text(widget.mood.label.toUpperCase()),
