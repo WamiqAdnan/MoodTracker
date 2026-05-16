@@ -10,6 +10,7 @@ class MoodButton extends StatefulWidget {
     this.isSelected = false,
     this.faceSize = 80,
     this.showLabel = true,
+    this.showBackground = false,
   });
 
   final MoodType mood;
@@ -17,6 +18,7 @@ class MoodButton extends StatefulWidget {
   final bool isSelected;
   final double faceSize;
   final bool showLabel;
+  final bool showBackground;
 
   @override
   State<MoodButton> createState() => _MoodButtonState();
@@ -76,30 +78,42 @@ class _MoodButtonState extends State<MoodButton>
               scale: _scaleAnimation,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
+                width: widget.faceSize + 16,
+                height: widget.faceSize + 16,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: widget.showBackground
+                      ? const Color(0xFF1E1B2E)
+                      : Colors.transparent,
                   border: showRing
                       ? Border.all(
                           color: color.withOpacity(
                               widget.isSelected ? 1.0 : 0.55),
-                          width: widget.isSelected ? 3.0 : 2.0,
+                          width: widget.isSelected ? 2.5 : 1.5,
                         )
-                      : Border.all(color: Colors.transparent, width: 2.0),
+                      : Border.all(
+                          color: widget.showBackground
+                              ? const Color(0xFF2A2740)
+                              : Colors.transparent,
+                          width: 1.0,
+                        ),
                   boxShadow: showRing
                       ? [
                           BoxShadow(
-                            color: color.withOpacity(0.25),
-                            blurRadius: 10,
+                            color: color.withOpacity(0.28),
+                            blurRadius: 12,
                             spreadRadius: 2,
                           )
                         ]
                       : null,
                 ),
-                child: CustomPaint(
-                  size: Size(widget.faceSize, widget.faceSize),
-                  painter: FacePainter(
-                    mood: widget.mood,
-                    accentColor: color,
+                child: Center(
+                  child: CustomPaint(
+                    size: Size(widget.faceSize, widget.faceSize),
+                    painter: FacePainter(
+                      mood: widget.mood,
+                      accentColor: color,
+                    ),
                   ),
                 ),
               ),
@@ -112,12 +126,13 @@ class _MoodButtonState extends State<MoodButton>
                   fontSize: 11,
                   fontWeight: widget.isSelected
                       ? FontWeight.w700
-                      : FontWeight.w400,
+                      : FontWeight.w500,
                   color: widget.isSelected
                       ? color
-                      : const Color(0xFF9E9AAB),
+                      : const Color(0xFF8B8FA8),
+                  letterSpacing: 0.8,
                 ),
-                child: Text(widget.mood.label),
+                child: Text(widget.mood.label.toUpperCase()),
               ),
             ],
           ],

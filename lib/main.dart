@@ -14,7 +14,7 @@ class MoodTrackerApp extends StatelessWidget {
       title: 'Mood Tracker',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF7F6F3),
+        scaffoldBackgroundColor: const Color(0xFF12101F),
         useMaterial3: true,
       ),
       home: const HomeScreen(),
