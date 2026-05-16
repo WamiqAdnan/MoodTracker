@@ -276,10 +276,11 @@ class _FaceIcon extends StatefulWidget {
   State<_FaceIcon> createState() => _FaceIconState();
 }
 
-class _FaceIconState extends State<_FaceIcon>
-    with SingleTickerProviderStateMixin {
+class _FaceIconState extends State<_FaceIcon> with TickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
@@ -304,6 +305,15 @@ class _FaceIconState extends State<_FaceIcon>
         weight: 50,
       ),
     ]).animate(_ctrl);
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: widget.entry.moodType.pulseDuration,
+    );
+    _pulseAnim = CurvedAnimation(
+      parent: _pulseCtrl,
+      curve: widget.entry.moodType.pulseCurve,
+    );
   }
 
   @override
@@ -315,20 +325,42 @@ class _FaceIconState extends State<_FaceIcon>
   @override
   void dispose() {
     _ctrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  void _onHover(bool hovered) {
+    if (hovered) {
+      _pulseCtrl.repeat(reverse: true);
+    } else {
+      _pulseCtrl.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: ScaleTransition(
-        scale: _scale,
-        child: CustomPaint(
-          size: Size(widget.size, widget.size),
-          painter: TimelineFacePainter(
-            mood: widget.entry.moodType,
-            accentColor: widget.entry.moodType.color,
+    return MouseRegion(
+      onEnter: (_) => _onHover(true),
+      onExit: (_) => _onHover(false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedBuilder(
+            animation: _pulseAnim,
+            builder: (context, _) => CustomPaint(
+              size: Size(widget.size, widget.size),
+              painter: TimelineFacePainter(
+                mood: widget.entry.moodType,
+                accentColor: widget.entry.moodType.color,
+                expressionPulse: _pulseAnim.value,
+              ),
+            ),
           ),
         ),
       ),
