@@ -80,11 +80,11 @@ extension MoodTypeX on MoodType {
   };
 
   Duration get pulseDuration => switch (this) {
-    MoodType.ecstatic => const Duration(milliseconds: 480),
-    MoodType.happy => const Duration(milliseconds: 600),
-    MoodType.neutral => const Duration(milliseconds: 1100),
-    MoodType.sad => const Duration(milliseconds: 900),
-    MoodType.awful => const Duration(milliseconds: 1300),
+    MoodType.ecstatic => const Duration(milliseconds: 340),
+    MoodType.happy => const Duration(milliseconds: 420),
+    MoodType.neutral => const Duration(milliseconds: 780),
+    MoodType.sad => const Duration(milliseconds: 640),
+    MoodType.awful => const Duration(milliseconds: 920),
   };
 
   Curve get pulseCurve => switch (this) {
