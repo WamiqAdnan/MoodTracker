@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
 import 'package:mood_tracker/features/mood/widgets/mood_button.dart';
 import 'package:mood_tracker/features/mood/widgets/timeline_strip.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen>
   String? _animatingEntryId;
   late final AnimationController _addController;
 
+  static const _prefsKey = 'mood_entries';
+
   @override
   void initState() {
     super.initState();
@@ -25,12 +30,30 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _loadEntries();
   }
 
   @override
   void dispose() {
     _addController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = prefs.getStringList(_prefsKey) ?? [];
+    final loaded = jsonList
+        .map((s) => MoodEntry.fromJson(jsonDecode(s) as Map<String, dynamic>))
+        .toList();
+    if (mounted) setState(() => _entries.addAll(loaded));
+  }
+
+  Future<void> _saveEntries() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _prefsKey,
+      _entries.take(50).map((e) => jsonEncode(e.toJson())).toList(),
+    );
   }
 
   void _onMoodTapped(MoodType mood) {
@@ -42,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen>
       _animatingEntryId = entry.id;
     });
 
+    _saveEntries();
     _addController.forward(from: 0);
 
     Future.delayed(const Duration(milliseconds: 1500), () {
@@ -96,12 +120,13 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: MoodType.values.map((mood) {
+                      final isSelected = _selectedMoodId != null &&
+                          _entries.isNotEmpty &&
+                          _entries.first.id == _selectedMoodId &&
+                          _entries.first.moodType == mood;
                       return MoodButton(
                         mood: mood,
-                        isSelected: _selectedMoodId != null &&
-                            _entries.isNotEmpty &&
-                            _entries.first.id == _selectedMoodId &&
-                            _entries.first.moodType == mood,
+                        isSelected: isSelected,
                         onTap: () => _onMoodTapped(mood),
                       );
                     }).toList(),
