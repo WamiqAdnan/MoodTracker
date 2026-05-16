@@ -90,62 +90,143 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ── Insight engine ───────────────────────────────────────────────────────────
 
-  String _getInsight() {
-    if (_entries.isEmpty) return 'Log your first mood to unlock insights.';
-    if (_entries.length < 3) return 'Keep logging daily to reveal your patterns.';
+  _InsightData _getInsight() {
+    if (_entries.isEmpty) {
+      return _InsightData(
+        title: 'Your story starts here',
+        detail: 'Every check-in is a small act of self-awareness. Tap a mood above to log how you\'re feeling right now.',
+        tags: [],
+      );
+    }
 
-    // Trend: recent 3 vs older
+    final tags = _getInsightTags();
+
+    if (_entries.length < 3) {
+      final first = _entries.first.moodType;
+      return _InsightData(
+        title: 'Good to see you',
+        detail: 'You\'ve started checking in — that already takes intention. A few more days and your patterns will start to reveal themselves.',
+        tags: tags,
+        highlight: first.label,
+        highlightColor: first.color,
+      );
+    }
+
+    // ── Trend ──
     if (_entries.length >= 4) {
-      final recent = _entries.take(3).map((e) => e.moodType.graphValue).fold(0, (a, b) => a + b) / 3;
-      final olderList = _entries.skip(3).take(3).toList();
+      final recentVals = _entries.take(3).map((e) => e.moodType.graphValue).toList();
+      final olderList  = _entries.skip(3).take(3).toList();
       if (olderList.isNotEmpty) {
-        final older = olderList.map((e) => e.moodType.graphValue).fold(0, (a, b) => a + b) / olderList.length;
-        if (recent >= older + 0.7) return 'Your mood has been trending up lately. Great momentum!';
-        if (recent <= older - 0.7) return 'Your mood has dipped recently. Be kind to yourself.';
+        final recent = recentVals.fold(0, (a, b) => a + b) / recentVals.length;
+        final older  = olderList.map((e) => e.moodType.graphValue).fold(0, (a, b) => a + b) / olderList.length;
+        final diff   = recent - older;
+        if (diff >= 0.7) {
+          return _InsightData(
+            title: 'Things are looking up',
+            detail: 'Your recent check-ins are noticeably more positive than before. Whatever you\'re doing, it seems to be working — keep going.',
+            tags: tags,
+            highlight: 'Trending up',
+            highlightColor: _kPositive,
+          );
+        }
+        if (diff <= -0.7) {
+          return _InsightData(
+            title: 'A rough stretch lately',
+            detail: 'Your mood has been lower recently than it was before. That\'s okay — tough periods pass. Notice what\'s draining you and be gentle with yourself.',
+            tags: tags,
+            highlight: 'Dipping',
+            highlightColor: const Color(0xFFFF7675),
+          );
+        }
       }
     }
 
-    // Best day of week
+    // ── Best time of day ──
+    if (_entries.length >= 5) {
+      final timeGroups = <String, List<int>>{};
+      for (final e in _entries) {
+        final h = e.timestamp.hour;
+        final slot = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : h < 21 ? 'Evening' : 'Night';
+        timeGroups.putIfAbsent(slot, () => []).add(e.moodType.graphValue);
+      }
+      if (timeGroups.length >= 2) {
+        final avgs = timeGroups.map((k, v) => MapEntry(k, v.fold(0, (a, b) => a + b) / v.length));
+        final best  = avgs.entries.reduce((a, b) => a.value > b.value ? a : b);
+        final worst = avgs.entries.reduce((a, b) => a.value < b.value ? a : b);
+        if (best.value - worst.value >= 0.6) {
+          return _InsightData(
+            title: 'You\'re a ${best.key.toLowerCase()} person',
+            detail: 'Your energy and mood consistently peak in the ${best.key.toLowerCase()}. If you have something important to do, that\'s your window.',
+            tags: tags,
+            highlight: best.key,
+            highlightColor: _kAccent,
+          );
+        }
+      }
+    }
+
+    // ── Best day of week ──
     if (_entries.length >= 7) {
       final dayGroups = <int, List<int>>{};
       for (final e in _entries) {
         dayGroups.putIfAbsent(e.timestamp.weekday, () => []).add(e.moodType.graphValue);
       }
       if (dayGroups.length >= 3) {
-        final dayAvgs = dayGroups.map((d, vals) =>
-            MapEntry(d, vals.fold(0, (a, b) => a + b) / vals.length));
-        final best = dayAvgs.entries.reduce((a, b) => a.value > b.value ? a : b);
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return 'You tend to feel best on ${days[best.key - 1]}s.';
+        final avgs = dayGroups.map((d, v) => MapEntry(d, v.fold(0, (a, b) => a + b) / v.length));
+        final best = avgs.entries.reduce((a, b) => a.value > b.value ? a : b);
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        final dayLabel = dayNames[best.key - 1];
+        return _InsightData(
+          title: '$dayLabel suits you',
+          detail: '${dayLabel}s tend to bring out the best in you. You might want to schedule things you enjoy or find challenging on that day.',
+          tags: tags,
+          highlight: dayLabel,
+          highlightColor: _kAccent,
+        );
       }
     }
 
-    // Most frequent mood this week
+    // ── Most frequent mood ──
     final counts = <MoodType, int>{};
     for (final e in _entries.take(7)) {
       counts[e.moodType] = (counts[e.moodType] ?? 0) + 1;
     }
     final top = counts.entries.reduce((a, b) => a.value > b.value ? a : b);
-    if (top.value >= 2) return 'You\'ve been logging ${top.key.label} most this week.';
+    if (top.value >= 2) {
+      final moodLabel = top.key.label.toLowerCase();
+      return _InsightData(
+        title: 'Feeling ${top.key.label} a lot lately',
+        detail: _moodNarrative(top.key),
+        tags: tags,
+        highlight: top.key.label,
+        highlightColor: top.key.color,
+      );
+    }
 
-    // Streak fallback
+    // ── Streak fallback ──
     final streak = _computeStreak();
-    return streak >= 2
-        ? 'You\'re on a $streak-day streak. Keep it up!'
-        : 'Consistency is key. Log daily to see your patterns.';
+    return _InsightData(
+      title: streak >= 2 ? 'On a roll' : 'Showing up matters',
+      detail: streak >= 2
+          ? 'Checking in $streak days in a row is a real habit forming. Self-awareness compounds — the longer you do this the more patterns emerge.'
+          : 'Even logging once a week tells a story over time. There\'s no pressure — just notice and record whenever you can.',
+      tags: tags,
+    );
   }
+
+  String _moodNarrative(MoodType mood) => switch (mood) {
+    MoodType.ecstatic => 'You\'ve been riding a real high lately. Savour it, take note of what\'s contributing to it, and see if you can carry any of those conditions forward.',
+    MoodType.happy    => 'Things seem to be going well for you. That steady positive baseline is worth protecting — notice what\'s feeding it.',
+    MoodType.neutral  => 'You\'ve been holding steady in the middle ground. Neither soaring nor struggling — sometimes that calm consistency is exactly what you need.',
+    MoodType.sad      => 'It\'s been a heavier stretch. Acknowledging that is the first step. Think about what small things have lifted your mood before, even briefly.',
+    MoodType.awful    => 'You\'ve been going through a difficult time. Be patient with yourself — logging these feelings takes courage and is the start of understanding them.',
+  };
 
   List<String> _getInsightTags() {
     if (_entries.isEmpty) return [];
     final last = _entries.first;
     final hour = last.timestamp.hour;
-    final timeTag = hour < 12
-        ? 'Morning'
-        : hour < 17
-            ? 'Afternoon'
-            : hour < 21
-                ? 'Evening'
-                : 'Night';
+    final timeTag = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 21 ? 'Evening' : 'Night';
     return [last.moodType.label, timeTag];
   }
 
@@ -250,8 +331,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     )),
                     const SizedBox(width: 12),
                     Expanded(flex: 4, child: _InsightStatsCard(
-                      insight: _getInsight(),
-                      tags: _getInsightTags(),
+                      data: _getInsight(),
                       streak: _computeStreak(),
                       average: _computeAverage(),
                     )),
@@ -469,14 +549,12 @@ class _TrendCard extends StatelessWidget {
 
 class _InsightStatsCard extends StatelessWidget {
   const _InsightStatsCard({
-    required this.insight,
-    required this.tags,
+    required this.data,
     required this.streak,
     required this.average,
   });
 
-  final String insight;
-  final List<String> tags;
+  final _InsightData data;
   final int streak;
   final double average;
 
@@ -486,7 +564,6 @@ class _InsightStatsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Insight section
           const Text(
             'INSIGHT',
             style: TextStyle(
@@ -497,20 +574,56 @@ class _InsightStatsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          // Title + highlight badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  data.title,
+                  style: const TextStyle(
+                    color: _kTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              if (data.highlight != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (data.highlightColor ?? _kAccent).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    data.highlight!,
+                    style: TextStyle(
+                      color: data.highlightColor ?? _kAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 6),
           Expanded(
             child: Text(
-              insight,
+              data.detail,
               style: const TextStyle(
-                color: _kTextPrimary,
-                fontSize: 13,
-                height: 1.5,
+                color: _kTextSecondary,
+                fontSize: 12,
+                height: 1.55,
               ),
             ),
           ),
-          if (tags.isNotEmpty) ...[
+          if (data.tags.isNotEmpty) ...[
             Wrap(
               spacing: 6,
-              children: tags.map((t) => _Tag(label: t)).toList(),
+              children: data.tags.map((t) => _Tag(label: t)).toList(),
             ),
             const SizedBox(height: 12),
           ] else
@@ -607,6 +720,24 @@ class _InsightStatsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Insight data model ────────────────────────────────────────────────────────
+
+class _InsightData {
+  const _InsightData({
+    required this.title,
+    required this.detail,
+    required this.tags,
+    this.highlight,
+    this.highlightColor,
+  });
+
+  final String title;
+  final String detail;
+  final List<String> tags;
+  final String? highlight;
+  final Color? highlightColor;
 }
 
 class _Tag extends StatelessWidget {
