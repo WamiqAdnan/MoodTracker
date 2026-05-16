@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
 import 'package:mood_tracker/features/mood/painters/timeline_face_painter.dart';
-import 'package:intl/intl.dart';
 
 class TimelineStrip extends StatelessWidget {
   const TimelineStrip({
@@ -18,69 +18,165 @@ class TimelineStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayed = entries.take(7).toList();
+    final placeholderCount = (7 - displayed.length).clamp(0, 7);
 
-    return ListView.separated(
+    return ListView(
       scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: displayed.isEmpty ? 7 : displayed.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 8),
-      itemBuilder: (context, i) {
-        if (i >= displayed.length) return _PlaceholderCard(index: i);
-        return _TimelineCard(
-          entry: displayed[i],
-          onTap: () => onEntryTap(displayed[i].id),
-        );
-      },
+      children: [
+        ...displayed.map(
+          (entry) => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _TimelineCard(
+              key: ValueKey(entry.id),
+              entry: entry,
+              isAnimating: animatingId == entry.id,
+              onTap: () => onEntryTap(entry.id),
+            ),
+          ),
+        ),
+        ...List.generate(
+          placeholderCount,
+          (i) => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _PlaceholderCard(key: ValueKey('placeholder_$i')),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _TimelineCard extends StatelessWidget {
-  const _TimelineCard({required this.entry, required this.onTap});
+// ── Real card ─────────────────────────────────────────────────────────────────
+
+class _TimelineCard extends StatefulWidget {
+  const _TimelineCard({
+    super.key,
+    required this.entry,
+    required this.onTap,
+    this.isAnimating = false,
+  });
 
   final MoodEntry entry;
   final VoidCallback onTap;
+  final bool isAnimating;
+
+  @override
+  State<_TimelineCard> createState() => _TimelineCardState();
+}
+
+class _TimelineCardState extends State<_TimelineCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.15)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.15, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50,
+      ),
+    ]).animate(_controller);
+  }
+
+  @override
+  void didUpdateWidget(_TimelineCard old) {
+    super.didUpdateWidget(old);
+    if (widget.isAnimating && !old.isAnimating) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = entry.moodType.color;
-    final dateStr = DateFormat('EEE d').format(entry.timestamp);
+    final color = widget.entry.moodType.color;
+    final dateStr = DateFormat('EEE d').format(widget.entry.timestamp);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 80,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.10),
-          border: Border(left: BorderSide(color: color, width: 3)),
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(8),
-            bottomRight: Radius.circular(8),
+    return ScaleTransition(
+      scale: _scale,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          width: 80,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.10),
+            border: Border(left: BorderSide(color: color, width: 3)),
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CustomPaint(
+                size: const Size(48, 48),
+                painter: TimelineFacePainter(
+                  mood: widget.entry.moodType,
+                  accentColor: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.entry.moodType.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 9,
+                  color: Color(0xFFB0ACBD),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Placeholder card ───────────────────────────────────────────────────────────
+
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(),
+      child: SizedBox(
+        width: 80,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CustomPaint(
               size: const Size(48, 48),
-              painter: TimelineFacePainter(
-                mood: entry.moodType,
-                accentColor: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              entry.moodType.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              dateStr,
-              style: const TextStyle(fontSize: 9, color: Color(0xFFB0ACBD)),
+              painter: _QuestionFacePainter(),
             ),
           ],
         ),
@@ -89,36 +185,90 @@ class _TimelineCard extends StatelessWidget {
   }
 }
 
-class _PlaceholderCard extends StatelessWidget {
-  const _PlaceholderCard({required this.index});
+// Draws a dashed rounded-rect border
+class _DashedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const color = Color(0xFFD8D5E2);
+    const dashW = 5.0;
+    const dashGap = 4.0;
+    const radius = 8.0;
+    const strokeW = 1.5;
 
-  final int index;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeW
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(strokeW / 2, strokeW / 2, size.width - strokeW,
+            size.height - strokeW),
+        const Radius.circular(radius),
+      ));
+
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final end = (distance + dashW).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance += dashW + dashGap;
+      }
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 80,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFD8D5E2),
-          width: 1.5,
-          // Dashed effect via a simple muted border
-        ),
-      ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '?',
-            style: TextStyle(
-              fontSize: 28,
-              color: Color(0xFFD8D5E2),
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ],
-      ),
+  bool shouldRepaint(_DashedBorderPainter _) => false;
+}
+
+// Draws a placeholder face: head circle + two dots for eyes + flat mouth + a small dot below
+class _QuestionFacePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const color = Color(0xFFD8D5E2);
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2 * 0.82;
+
+    final fill = Paint()
+      ..color = color.withOpacity(0.15)
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    final dot = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    // Head
+    canvas.drawCircle(Offset(cx, cy), r, fill);
+    canvas.drawCircle(Offset(cx, cy), r, stroke);
+
+    // Eyes (two small circles)
+    final eyeY = cy - r * 0.22;
+    canvas.drawCircle(Offset(cx - r * 0.28, eyeY), r * 0.08, dot);
+    canvas.drawCircle(Offset(cx + r * 0.28, eyeY), r * 0.08, dot);
+
+    // Flat mouth
+    canvas.drawLine(
+      Offset(cx - r * 0.30, cy + r * 0.30),
+      Offset(cx + r * 0.30, cy + r * 0.30),
+      stroke,
     );
+
+    // Small dot above centre to hint "?" — drawn as a tiny arc hook + dot
+    final hookRect = Rect.fromCenter(
+      center: Offset(cx, cy - r * 0.05),
+      width: r * 0.32,
+      height: r * 0.28,
+    );
+    canvas.drawArc(hookRect, 3.8, 3.8, false, stroke);
+    canvas.drawCircle(Offset(cx, cy + r * 0.12), r * 0.06, dot);
   }
+
+  @override
+  bool shouldRepaint(_QuestionFacePainter _) => false;
 }
