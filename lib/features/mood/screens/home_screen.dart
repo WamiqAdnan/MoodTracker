@@ -362,29 +362,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
 
-              // Bottom cards
+              // Bottom cards — stacked below 800px, side by side above
               Expanded(
                 flex: 42,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: _TrendCard(
-                        entries: _entries,
-                        animatingId: _animatingEntryId,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 4,
-                      child: _InsightStatsCard(
-                        data: _getInsight(),
-                        streak: _computeStreak(),
-                        average: _computeAverage(),
-                      ),
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final trend = _TrendCard(
+                      entries: _entries,
+                      animatingId: _animatingEntryId,
+                    );
+                    final insight = _InsightStatsCard(
+                      data: _getInsight(),
+                      streak: _computeStreak(),
+                      average: _computeAverage(),
+                    );
+                    if (constraints.maxWidth < 800) {
+                      return Column(
+                        children: [
+                          Expanded(child: trend),
+                          const SizedBox(height: 10),
+                          Expanded(child: insight),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(flex: 5, child: trend),
+                        const SizedBox(width: 12),
+                        Expanded(flex: 4, child: insight),
+                      ],
+                    );
+                  },
                 ),
               ),
 
