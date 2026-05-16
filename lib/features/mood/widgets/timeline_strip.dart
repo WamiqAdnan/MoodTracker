@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
 import 'package:mood_tracker/features/mood/painters/timeline_face_painter.dart';
+import 'package:mood_tracker/features/mood/widgets/face_preview_overlay.dart';
 
 class TimelineStrip extends StatelessWidget {
   const TimelineStrip({
@@ -348,7 +349,10 @@ class _FaceIconState extends State<_FaceIcon> with TickerProviderStateMixin {
       onExit: (_) => _onHover(false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: () {
+          widget.onTap();
+          showFacePreview(context, widget.entry.moodType);
+        },
         child: ScaleTransition(
           scale: _scale,
           child: AnimatedBuilder(

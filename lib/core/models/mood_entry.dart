@@ -66,6 +66,19 @@ extension MoodTypeX on MoodType {
     _ => 0.0,
   };
 
+  String get previewMessage => switch (this) {
+    MoodType.ecstatic =>
+      'Pure joy.\nRide this wave and soak every bit of it in.',
+    MoodType.happy =>
+      'Things are going well.\nNotice what\'s feeding that — protect it.',
+    MoodType.neutral =>
+      'Steady and grounded.\nSometimes calm is exactly what you need.',
+    MoodType.sad =>
+      'It\'s okay to feel this way.\nAcknowledging it is already an act of courage.',
+    MoodType.awful =>
+      'One moment at a time.\nYou\'re stronger than this feeling.',
+  };
+
   Duration get pulseDuration => switch (this) {
     MoodType.ecstatic => const Duration(milliseconds: 480),
     MoodType.happy => const Duration(milliseconds: 600),

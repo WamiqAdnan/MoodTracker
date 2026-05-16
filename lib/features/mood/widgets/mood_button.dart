@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
 import 'package:mood_tracker/features/mood/painters/face_painter.dart';
+import 'package:mood_tracker/features/mood/widgets/face_preview_overlay.dart';
 
 class MoodButton extends StatefulWidget {
   const MoodButton({
@@ -89,7 +90,10 @@ class _MoodButtonState extends State<MoodButton>
       onExit: (_) => _onHoverChanged(false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: () {
+          widget.onTap();
+          showFacePreview(context, widget.mood);
+        },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
