@@ -37,29 +37,25 @@ class FacePainter extends CustomPainter {
   }
 
   void _drawHead(Canvas canvas, double cx, double cy, double radius) {
-    final fillPaint = Paint()
-      ..color = accentColor.withOpacity(0.20)
-      ..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-
-    canvas.drawCircle(Offset(cx, cy), radius, fillPaint);
-    canvas.drawCircle(Offset(cx, cy), radius, strokePaint);
+    canvas.drawCircle(Offset(cx, cy), radius,
+        Paint()
+          ..color = accentColor.withOpacity(0.20)
+          ..style = PaintingStyle.fill);
+    canvas.drawCircle(Offset(cx, cy), radius,
+        Paint()
+          ..color = accentColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5);
   }
 
   void _drawEyes(Canvas canvas, double cx, double cy, double radius) {
     final paint = Paint()
       ..color = accentColor
       ..style = PaintingStyle.fill;
-
     final eyeY = cy - radius * 0.22;
     final eyeOffsetX = radius * 0.30;
-    final eyeRadius = radius * 0.10;
-
-    canvas.drawCircle(Offset(cx - eyeOffsetX, eyeY), eyeRadius, paint);
-    canvas.drawCircle(Offset(cx + eyeOffsetX, eyeY), eyeRadius, paint);
+    canvas.drawCircle(Offset(cx - eyeOffsetX, eyeY), radius * 0.10, paint);
+    canvas.drawCircle(Offset(cx + eyeOffsetX, eyeY), radius * 0.10, paint);
   }
 
   void _drawBrows(Canvas canvas, double cx, double cy, double radius) {
@@ -71,37 +67,33 @@ class FacePainter extends CustomPainter {
 
     final browY = cy - radius * 0.42;
     final eyeOffsetX = radius * 0.30;
-    final browHalfW = radius * 0.18;
+    final hw = radius * 0.20; // half-width of each brow
 
     if (mood == MoodType.ecstatic || mood == MoodType.happy) {
-      final rect = Rect.fromCenter(
-        center: Offset.zero,
-        width: browHalfW * 2.2,
-        height: browHalfW * 1.2,
-      );
-      for (final sign in [-1.0, 1.0]) {
-        canvas.save();
-        canvas.translate(cx + sign * eyeOffsetX, browY);
-        canvas.drawArc(rect, math.pi, math.pi, false, paint);
-        canvas.restore();
-      }
-    } else if (mood == MoodType.neutral) {
-      for (final sign in [-1.0, 1.0]) {
-        canvas.drawLine(
-          Offset(cx + sign * eyeOffsetX - browHalfW, browY),
-          Offset(cx + sign * eyeOffsetX + browHalfW, browY),
-          paint,
-        );
-      }
-    } else {
-      // Angled inward V brows for sad/awful
-      final angle = mood.browAngle;
+      // Arch curving upward above each eye (∩ shape)
       for (final sign in [-1.0, 1.0]) {
         final bx = cx + sign * eyeOffsetX;
         final path = Path()
-          ..moveTo(bx - sign * browHalfW, browY + browHalfW * math.sin(angle))
-          ..lineTo(bx + sign * browHalfW, browY - browHalfW * math.sin(angle));
+          ..moveTo(bx - hw, browY)
+          ..quadraticBezierTo(bx, browY - hw * 0.8, bx + hw, browY);
         canvas.drawPath(path, paint);
+      }
+    } else if (mood == MoodType.neutral) {
+      for (final sign in [-1.0, 1.0]) {
+        final bx = cx + sign * eyeOffsetX;
+        canvas.drawLine(Offset(bx - hw, browY), Offset(bx + hw, browY), paint);
+      }
+    } else {
+      // Furrowed: inner corner angled downward toward center (\  /)
+      final drop = hw * math.sin(mood.browAngle);
+      for (final sign in [-1.0, 1.0]) {
+        final bx = cx + sign * eyeOffsetX;
+        // outer end: normal height; inner end (toward nose): lower
+        final outerY = browY - drop;
+        final innerY = browY + drop;
+        final outerX = bx - sign * hw;
+        final innerX = bx + sign * hw;
+        canvas.drawLine(Offset(outerX, outerY), Offset(innerX, innerY), paint);
       }
     }
   }
@@ -113,39 +105,40 @@ class FacePainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
 
-    final mouthY = cy + radius * 0.30;
+    final mouthY = cy + radius * 0.32;
     final halfW = radius * 0.38;
     final curve = mood.mouthCurve;
-    final cornerDrop = mood == MoodType.awful ? radius * 0.12 : 0.0;
 
-    final startX = cx - halfW;
-    final endX = cx + halfW;
+    // Positive curve → control point below endpoints → ∪ = smile
+    // Negative curve → control point above endpoints → ∩ = frown
+    final cornerDrop = mood == MoodType.awful ? radius * 0.10 : 0.0;
     final startY = mouthY + cornerDrop;
     final endY = mouthY + cornerDrop;
-    final cpY = mouthY - curve * radius * 0.28;
+    final cpY = mouthY + curve * radius * 0.30;
 
     final path = Path()
-      ..moveTo(startX, startY)
+      ..moveTo(cx - halfW, startY)
       ..cubicTo(
-        startX + halfW * 0.5, cpY,
-        endX - halfW * 0.5, cpY,
-        endX, endY,
+        cx - halfW * 0.5, cpY,
+        cx + halfW * 0.5, cpY,
+        cx + halfW, endY,
       );
     canvas.drawPath(path, paint);
 
+    // Teeth hint for ecstatic (inner arc, lighter)
     if (mood.hasTeeth) {
       final teethPaint = Paint()
-        ..color = accentColor.withOpacity(0.45)
+        ..color = accentColor.withOpacity(0.40)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round;
-
+      final teethCpY = mouthY + curve * radius * 0.14;
       final teethPath = Path()
-        ..moveTo(startX + halfW * 0.15, mouthY + radius * 0.04)
+        ..moveTo(cx - halfW * 0.72, mouthY + radius * 0.06)
         ..cubicTo(
-          startX + halfW * 0.5, mouthY - curve * radius * 0.10 + radius * 0.08,
-          endX - halfW * 0.5, mouthY - curve * radius * 0.10 + radius * 0.08,
-          endX - halfW * 0.15, mouthY + radius * 0.04,
+          cx - halfW * 0.3, teethCpY,
+          cx + halfW * 0.3, teethCpY,
+          cx + halfW * 0.72, mouthY + radius * 0.06,
         );
       canvas.drawPath(teethPath, teethPaint);
     }
@@ -155,33 +148,26 @@ class FacePainter extends CustomPainter {
     final paint = Paint()
       ..color = accentColor.withOpacity(0.18)
       ..style = PaintingStyle.fill;
-
     final cheekY = cy + radius * 0.08;
-    final cheekOffsetX = radius * 0.55;
-    final cheekW = radius * 0.22;
-    final cheekH = radius * 0.13;
-
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(cx - cheekOffsetX, cheekY),
-        width: cheekW,
-        height: cheekH,
-      ),
+          center: Offset(cx - radius * 0.55, cheekY),
+          width: radius * 0.24,
+          height: radius * 0.14),
       paint,
     );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(cx + cheekOffsetX, cheekY),
-        width: cheekW,
-        height: cheekH,
-      ),
+          center: Offset(cx + radius * 0.55, cheekY),
+          width: radius * 0.24,
+          height: radius * 0.14),
       paint,
     );
   }
 
   @override
-  bool shouldRepaint(FacePainter oldDelegate) =>
-      oldDelegate.mood != mood ||
-      oldDelegate.accentColor != accentColor ||
-      oldDelegate.animationValue != animationValue;
+  bool shouldRepaint(FacePainter old) =>
+      old.mood != mood ||
+      old.accentColor != accentColor ||
+      old.animationValue != animationValue;
 }

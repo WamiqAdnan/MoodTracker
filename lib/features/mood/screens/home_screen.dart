@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
+import 'package:mood_tracker/features/mood/painters/face_painter.dart';
 import 'package:mood_tracker/features/mood/widgets/mood_button.dart';
 import 'package:mood_tracker/features/mood/widgets/timeline_strip.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,12 +15,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<MoodEntry> _entries = [];
+
   String? _selectedMoodId;
   String? _animatingEntryId;
   late final AnimationController _addController;
+  late final AnimationController _pulseController;
 
   static const _prefsKey = 'mood_entries';
 
@@ -30,12 +32,18 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
     _loadEntries();
   }
 
   @override
   void dispose() {
     _addController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -45,7 +53,9 @@ class _HomeScreenState extends State<HomeScreen>
     final loaded = jsonList
         .map((s) => MoodEntry.fromJson(jsonDecode(s) as Map<String, dynamic>))
         .toList();
-    if (mounted) setState(() => _entries.addAll(loaded));
+    if (mounted && loaded.isNotEmpty) {
+      setState(() => _entries.addAll(loaded));
+    }
   }
 
   Future<void> _saveEntries() async {
@@ -79,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final today = DateFormat('EEE, MMM d').format(DateTime.now());
+    final isEmpty = _entries.isEmpty;
 
     return Scaffold(
       body: SafeArea(
@@ -111,28 +122,10 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
 
-            // Mood selector
+            // Mood selector or empty state
             Expanded(
               flex: 55,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: MoodType.values.map((mood) {
-                      final isSelected = _selectedMoodId != null &&
-                          _entries.isNotEmpty &&
-                          _entries.first.id == _selectedMoodId &&
-                          _entries.first.moodType == mood;
-                      return MoodButton(
-                        mood: mood,
-                        isSelected: isSelected,
-                        onTap: () => _onMoodTapped(mood),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
+              child: isEmpty ? _buildEmptyState() : _buildMoodSelector(),
             ),
 
             // Divider label
@@ -163,6 +156,88 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMoodSelector() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 400;
+        final faceSize = narrow ? 56.0 : 80.0;
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: MoodType.values.map((mood) {
+                final isSelected = _selectedMoodId != null &&
+                    _entries.isNotEmpty &&
+                    _entries.first.id == _selectedMoodId &&
+                    _entries.first.moodType == mood;
+                return MoodButton(
+                  mood: mood,
+                  isSelected: isSelected,
+                  faceSize: faceSize,
+                  showLabel: !narrow,
+                  onTap: () => _onMoodTapped(mood),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, _) {
+            final scale = 0.92 + 0.08 * _pulseController.value;
+            return Transform.scale(
+              scale: scale,
+              child: CustomPaint(
+                size: const Size(80, 80),
+                painter: FacePainter(
+                  mood: MoodType.neutral,
+                  accentColor: const Color(0xFF9B8EA8),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'tap a mood to begin',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFFB0ACBD),
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 24),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final narrow = constraints.maxWidth < 400;
+            final faceSize = narrow ? 56.0 : 80.0;
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: MoodType.values.map((mood) {
+                return MoodButton(
+                  mood: mood,
+                  isSelected: false,
+                  faceSize: faceSize,
+                  showLabel: !narrow,
+                  onTap: () => _onMoodTapped(mood),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }

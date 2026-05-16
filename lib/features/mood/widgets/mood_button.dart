@@ -8,11 +8,15 @@ class MoodButton extends StatefulWidget {
     required this.mood,
     required this.onTap,
     this.isSelected = false,
+    this.faceSize = 80,
+    this.showLabel = true,
   });
 
   final MoodType mood;
   final VoidCallback onTap;
   final bool isSelected;
+  final double faceSize;
+  final bool showLabel;
 
   @override
   State<MoodButton> createState() => _MoodButtonState();
@@ -76,7 +80,8 @@ class _MoodButtonState extends State<MoodButton>
                   shape: BoxShape.circle,
                   border: showRing
                       ? Border.all(
-                          color: color.withOpacity(widget.isSelected ? 1.0 : 0.55),
+                          color: color.withOpacity(
+                              widget.isSelected ? 1.0 : 0.55),
                           width: widget.isSelected ? 3.0 : 2.0,
                         )
                       : Border.all(color: Colors.transparent, width: 2.0),
@@ -91,7 +96,7 @@ class _MoodButtonState extends State<MoodButton>
                       : null,
                 ),
                 child: CustomPaint(
-                  size: const Size(80, 80),
+                  size: Size(widget.faceSize, widget.faceSize),
                   painter: FacePainter(
                     mood: widget.mood,
                     accentColor: color,
@@ -99,17 +104,22 @@ class _MoodButtonState extends State<MoodButton>
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 180),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight:
-                    widget.isSelected ? FontWeight.w700 : FontWeight.w400,
-                color: widget.isSelected ? color : const Color(0xFF9E9AAB),
+            if (widget.showLabel) ...[
+              const SizedBox(height: 6),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 180),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: widget.isSelected
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                  color: widget.isSelected
+                      ? color
+                      : const Color(0xFF9E9AAB),
+                ),
+                child: Text(widget.mood.label),
               ),
-              child: Text(widget.mood.label),
-            ),
+            ],
           ],
         ),
       ),

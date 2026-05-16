@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mood_tracker/core/models/mood_entry.dart';
@@ -17,6 +19,7 @@ class TimelineStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Always show exactly 7 slots: real entries first, placeholders fill the rest.
     final displayed = entries.take(7).toList();
     final placeholderCount = (7 - displayed.length).clamp(0, 7);
 
@@ -25,8 +28,8 @@ class TimelineStrip extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        ...displayed.map(
-          (entry) => Padding(
+        for (final entry in displayed)
+          Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _TimelineCard(
               key: ValueKey(entry.id),
@@ -35,14 +38,11 @@ class TimelineStrip extends StatelessWidget {
               onTap: () => onEntryTap(entry.id),
             ),
           ),
-        ),
-        ...List.generate(
-          placeholderCount,
-          (i) => Padding(
+        for (var i = 0; i < placeholderCount; i++)
+          Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: _PlaceholderCard(key: ValueKey('placeholder_$i')),
+            child: _PlaceholderCard(key: ValueKey('ph_$i')),
           ),
-        ),
       ],
     );
   }
@@ -160,7 +160,7 @@ class _TimelineCardState extends State<_TimelineCard>
   }
 }
 
-// ── Placeholder card ───────────────────────────────────────────────────────────
+// ── Placeholder card ──────────────────────────────────────────────────────────
 
 class _PlaceholderCard extends StatelessWidget {
   const _PlaceholderCard({super.key});
@@ -171,21 +171,17 @@ class _PlaceholderCard extends StatelessWidget {
       painter: _DashedBorderPainter(),
       child: SizedBox(
         width: 80,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CustomPaint(
-              size: const Size(48, 48),
-              painter: _QuestionFacePainter(),
-            ),
-          ],
+        child: Center(
+          child: CustomPaint(
+            size: const Size(48, 48),
+            painter: _QuestionFacePainter(),
+          ),
         ),
       ),
     );
   }
 }
 
-// Draws a dashed rounded-rect border
 class _DashedBorderPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -207,8 +203,7 @@ class _DashedBorderPainter extends CustomPainter {
         const Radius.circular(radius),
       ));
 
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
+    for (final metric in path.computeMetrics()) {
       double distance = 0;
       while (distance < metric.length) {
         final end = (distance + dashW).clamp(0.0, metric.length);
@@ -222,7 +217,6 @@ class _DashedBorderPainter extends CustomPainter {
   bool shouldRepaint(_DashedBorderPainter _) => false;
 }
 
-// Draws a placeholder face: head circle + two dots for eyes + flat mouth + a small dot below
 class _QuestionFacePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -243,29 +237,29 @@ class _QuestionFacePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.fill;
 
-    // Head
     canvas.drawCircle(Offset(cx, cy), r, fill);
     canvas.drawCircle(Offset(cx, cy), r, stroke);
 
-    // Eyes (two small circles)
-    final eyeY = cy - r * 0.22;
-    canvas.drawCircle(Offset(cx - r * 0.28, eyeY), r * 0.08, dot);
-    canvas.drawCircle(Offset(cx + r * 0.28, eyeY), r * 0.08, dot);
+    canvas.drawCircle(Offset(cx - r * 0.28, cy - r * 0.22), r * 0.08, dot);
+    canvas.drawCircle(Offset(cx + r * 0.28, cy - r * 0.22), r * 0.08, dot);
 
-    // Flat mouth
     canvas.drawLine(
       Offset(cx - r * 0.30, cy + r * 0.30),
       Offset(cx + r * 0.30, cy + r * 0.30),
       stroke,
     );
 
-    // Small dot above centre to hint "?" — drawn as a tiny arc hook + dot
-    final hookRect = Rect.fromCenter(
-      center: Offset(cx, cy - r * 0.05),
-      width: r * 0.32,
-      height: r * 0.28,
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(cx, cy - r * 0.05),
+        width: r * 0.32,
+        height: r * 0.28,
+      ),
+      math.pi + 0.4,
+      math.pi + 0.2,
+      false,
+      stroke,
     );
-    canvas.drawArc(hookRect, 3.8, 3.8, false, stroke);
     canvas.drawCircle(Offset(cx, cy + r * 0.12), r * 0.06, dot);
   }
 
